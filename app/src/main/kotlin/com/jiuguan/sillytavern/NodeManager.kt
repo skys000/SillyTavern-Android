@@ -95,7 +95,19 @@ class NodeManager(private val context: Context) {
         val stDir = File(baseDir, ST_DIR)
 
         try {
-            // Clean everything and start fresh
+            // Preserve user data across updates
+            val dataDir = File(stDir, "data")
+            val dataBackup = File(context.cacheDir, "st_data_backup")
+            val hasUserData = dataDir.exists() && (dataDir.list()?.isNotEmpty() == true)
+
+            if (hasUserData) {
+                onProgress("正在备份用户数据...")
+                if (dataBackup.exists()) dataBackup.deleteRecursively()
+                dataDir.renameTo(dataBackup)
+                Log.i(TAG, "User data backed up to: ${dataBackup.absolutePath}")
+            }
+
+            // Clean old SillyTavern files (data already moved out)
             if (stDir.exists()) {
                 onProgress("正在清理旧文件...")
                 stDir.deleteRecursively()
@@ -113,6 +125,14 @@ class NodeManager(private val context: Context) {
                 extractZip(input, stDir, onProgress)
             }
             tmpZip.delete()
+
+            // Restore user data
+            if (hasUserData && dataBackup.exists()) {
+                onProgress("正在恢复用户数据...")
+                if (dataDir.exists()) dataDir.deleteRecursively()
+                dataBackup.renameTo(dataDir)
+                Log.i(TAG, "User data restored to: ${dataDir.absolutePath}")
+            }
 
             // Write version marker
             File(baseDir, VERSION_FILE).writeText(BUNDLE_VERSION)
