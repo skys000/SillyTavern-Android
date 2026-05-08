@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background circle -->
+    <path
+        android:fillColor="#4ECDC4"
+        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+
+    <!-- Simple tavern/mug icon -->
+    <path
+        android:fillColor="#1A1A2E"
+        android:pathData="M38,38 L38,68 C38,72 42,76 48,76 L60,76 C66,76 70,72 70,68 L70,38 Z" />
+
+    <!-- Handle -->
+    <path
+        android:fillColor="#1A1A2E"
+        android:pathData="M70,44 L76,44 C78,44 80,46 80,48 L80,56 C80,58 78,60 76,60 L70,60"
+        android:strokeWidth="0"
+        android:strokeColor="#00000000" />
+
+    <!-- Foam top -->
+    <path
+        android:fillColor="#E8E8E8"
+        android:pathData="M36,38 C36,34 40,30 46,32 C48,28 56,28 58,32 C64,30 72,34 72,38 Z" />
+
+    <!-- ST text -->
+    <path
+        android:fillColor="#4ECDC4"
+        android:pathData="M46,50 L48,50 L48,54 L50,54 L50,50 L52,50 L52,56 L50,56 L50,58 L48,58 L48,56 L46,56 Z" />
+    <path
+        android:fillColor="#4ECDC4"
+        android:pathData="M55,50 L61,50 L61,52 L59,52 L59,58 L57,58 L57,52 L55,52 Z" />
+
+</vector>

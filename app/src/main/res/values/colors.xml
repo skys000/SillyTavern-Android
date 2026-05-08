@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SillyTavern dark theme colors -->
+    <color name="bg_dark">#FF1A1A2E</color>
+    <color name="bg_card">#FF16213E</color>
+    <color name="bg_surface">#FF0F3460</color>
+
+    <color name="accent">#FF4ECDC4</color>
+    <color name="accent_dark">#FF3AA89E</color>
+
+    <color name="text_primary">#FFE8E8E8</color>
+    <color name="text_secondary">#FFAAAAAA</color>
+    <color name="text_hint">#FF666666</color>
+
+    <color name="success">#FF4ECB71</color>
+    <color name="error">#FFFF6B6B</color>
+    <color name="warning">#FFFFD93D</color>
+
+    <color name="divider">#FF2A2A4A</color>
+
+    <!-- Standard Android colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
