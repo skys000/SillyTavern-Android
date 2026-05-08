@@ -98,14 +98,17 @@ class NodeManager(private val context: Context) {
             // Preserve user data across updates
             val dataDir = File(stDir, "data")
             val dataBackup = File(context.cacheDir, "st_data_backup")
-            val hasUserData = dataDir.exists() && (dataDir.list()?.isNotEmpty() == true)
 
-            if (hasUserData) {
+            // If backup already exists from a previously interrupted extraction, keep it
+            if (dataBackup.exists()) {
+                Log.w(TAG, "Found backup from interrupted extraction, will restore after extract")
+            } else if (dataDir.exists() && (dataDir.list()?.isNotEmpty() == true)) {
+                // Normal case: move data/ to backup before re-extraction
                 onProgress("正在备份用户数据...")
-                if (dataBackup.exists()) dataBackup.deleteRecursively()
                 dataDir.renameTo(dataBackup)
                 Log.i(TAG, "User data backed up to: ${dataBackup.absolutePath}")
             }
+            val hasBackup = dataBackup.exists()
 
             // Clean old SillyTavern files (data already moved out)
             if (stDir.exists()) {
@@ -127,7 +130,7 @@ class NodeManager(private val context: Context) {
             tmpZip.delete()
 
             // Restore user data
-            if (hasUserData && dataBackup.exists()) {
+            if (hasBackup && dataBackup.exists()) {
                 onProgress("正在恢复用户数据...")
                 if (dataDir.exists()) dataDir.deleteRecursively()
                 dataBackup.renameTo(dataDir)
