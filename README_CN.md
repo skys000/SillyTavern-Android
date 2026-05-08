@@ -112,6 +112,44 @@ Node.js 官方不支持安卓。获取可用的 ARM64 Node.js 二进制最可靠
 └── README.md
 ```
 
+## 常见问题
+
+<details>
+<summary><b>npm ci 在 setup_assets.py 运行时卡住</b></summary>
+
+Windows 上 `npm ci` 安装完成后可能不会自动退出。如果卡了超过 5 分钟，直接杀掉进程（Ctrl+C 或任务管理器结束 `node.exe`），然后单独运行打包：
+
+```bash
+python scripts/package_sillytavern.py --local build_workspace/SillyTavern
+```
+</details>
+
+<details>
+<summary><b>启动时报 "invalid code lengths set" 错误</b></summary>
+
+这是大 zip 文件通过 Android AssetManager 流式读取时的已知问题。当前版本已修复（先复制到临时文件再解压）。如果仍遇到，请确保使用最新代码。
+</details>
+
+<details>
+<summary><b>APP 显示 "启动失败"</b></summary>
+
+- **首次启动需要 1-2 分钟** — SillyTavern 首次运行会复制默认预设
+- 如果超时，点击「重试」— 之后启动会快很多
+- 确认你的设备是 ARM64 架构（设置 → 关于手机 → 处理器）
+</details>
+
+<details>
+<summary><b>Token 计数不可用</b></summary>
+
+原生 `tiktoken` 模块在安卓上被替换为空壳。SillyTavern 会自动回退到内置的近似计算。这不影响聊天功能。
+</details>
+
+<details>
+<summary><b>APK 大约 200 MB，正常吗？</b></summary>
+
+正常。包含完整的 Node.js 运行时（44 MB）、共享库（37 MB）和 SillyTavern 源码+依赖（131 MB）。安装后解压占用约 500 MB 存储空间。
+</details>
+
 ## 许可证
 
 本项目仅为安卓外壳。[SillyTavern](https://github.com/SillyTavern/SillyTavern) 本身遵循 [AGPL-3.0](https://github.com/SillyTavern/SillyTavern/blob/release/LICENSE) 协议。

@@ -108,6 +108,44 @@ Node.js is not officially supported on Android. The most reliable way to get a w
 └── README.md
 ```
 
+## Troubleshooting
+
+<details>
+<summary><b>npm ci hangs during setup_assets.py</b></summary>
+
+On Windows, `npm ci` may hang after completing the install (progress shows 100% but process doesn't exit). If it hangs for more than 5 minutes, kill the process (Ctrl+C or Task Manager → kill `node.exe`), then run the packaging step separately:
+
+```bash
+python scripts/package_sillytavern.py --local build_workspace/SillyTavern
+```
+</details>
+
+<details>
+<summary><b>"invalid code lengths set" error on app startup</b></summary>
+
+This was a known issue with large zip files being read directly from Android's AssetManager. Fixed in the current version by copying assets to temp files before extraction. If you still encounter it, make sure you're using the latest code.
+</details>
+
+<details>
+<summary><b>App shows "启动失败" / startup failed</b></summary>
+
+- **First launch takes 1-2 minutes** — SillyTavern copies default presets on first run
+- If it times out, tap "Retry" — subsequent launches are much faster
+- Check if your device is ARM64 (Settings → About Phone → CPU)
+</details>
+
+<details>
+<summary><b>Token counting doesn't work</b></summary>
+
+The native `tiktoken` module is replaced with a stub on Android. SillyTavern will fall back to its built-in approximation. This is expected and doesn't affect chat functionality.
+</details>
+
+<details>
+<summary><b>APK is ~200 MB, is that normal?</b></summary>
+
+Yes. It contains the full Node.js runtime (44 MB), shared libraries (37 MB), and SillyTavern source + dependencies (131 MB). Once installed, the app uses ~500 MB of storage after extraction.
+</details>
+
 ## License
 
 This project is the Android wrapper only. [SillyTavern](https://github.com/SillyTavern/SillyTavern) is licensed under [AGPL-3.0](https://github.com/SillyTavern/SillyTavern/blob/release/LICENSE).
