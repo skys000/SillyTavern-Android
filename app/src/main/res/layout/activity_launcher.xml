@@ -39,8 +39,8 @@
         android:id="@+id/text_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
-        android:text="正在连接酒馆..."
+        android:layout_marginTop="32dp"
+        android:text="准备就绪"
         android:textColor="@color/text_primary"
         android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@id/text_subtitle"
@@ -68,15 +68,16 @@
         android:id="@+id/progress_bar"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:indeterminate="true"
         android:indeterminateTint="@color/accent"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/btn_start"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/text_subtitle" />
 
-    <!-- Action Buttons -->
+    <!-- Primary: Start Server -->
     <Button
         android:id="@+id/btn_start"
         android:layout_width="0dp"
@@ -87,36 +88,71 @@
         android:textColor="@color/bg_dark"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:visibility="gone"
         app:cornerRadius="16dp"
-        app:layout_constraintBottom_toTopOf="@id/btn_open_termux"
+        app:layout_constraintBottom_toTopOf="@id/btn_export"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/progress_bar" />
 
+    <!-- Data Management Row -->
+    <Button
+        android:id="@+id/btn_export"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="6dp"
+        android:text="导出数据"
+        android:textColor="@color/accent"
+        android:textSize="14sp"
+        app:cornerRadius="12dp"
+        app:strokeColor="@color/accent"
+        app:layout_constraintBottom_toTopOf="@id/btn_open_termux"
+        app:layout_constraintEnd_toStartOf="@id/btn_import"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_start" />
+
+    <Button
+        android:id="@+id/btn_import"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="6dp"
+        android:text="恢复数据"
+        android:textColor="@color/accent"
+        android:textSize="14sp"
+        app:cornerRadius="12dp"
+        app:strokeColor="@color/accent"
+        app:layout_constraintBottom_toTopOf="@id/btn_open_termux"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/btn_export"
+        app:layout_constraintTop_toBottomOf="@id/btn_start" />
+
+    <!-- V1 Termux button (hidden in V2 mode) -->
     <Button
         android:id="@+id/btn_open_termux"
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="0dp"
-        android:layout_height="52dp"
+        android:layout_height="48dp"
         android:layout_marginTop="12dp"
         android:text="打开 Termux"
         android:textColor="@color/accent"
-        android:textSize="15sp"
+        android:textSize="14sp"
         android:visibility="gone"
-        app:cornerRadius="16dp"
+        app:cornerRadius="12dp"
         app:strokeColor="@color/accent"
         app:layout_constraintBottom_toTopOf="@id/btn_retry"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btn_start" />
+        app:layout_constraintTop_toBottomOf="@id/btn_export" />
 
     <Button
         android:id="@+id/btn_retry"
         style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="48dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:text="重新检测"
         android:textColor="@color/text_secondary"
         android:textSize="14sp"

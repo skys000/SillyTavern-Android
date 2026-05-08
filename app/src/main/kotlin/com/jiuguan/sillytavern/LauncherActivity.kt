@@ -3,7 +3,9 @@ package com.jiuguan.sillytavern
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -11,9 +13,16 @@ import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import kotlinx.coroutines.*
+import java.io.*
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 /**
  * Startup Activity. Supports two modes:
@@ -37,9 +46,20 @@ class LauncherActivity : AppCompatActivity() {
     private lateinit var btnTermux: Button
     private lateinit var btnSettings: Button
     private lateinit var btnRetry: Button
+    private lateinit var btnExport: Button
+    private lateinit var btnImport: Button
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val handler = Handler(Looper.getMainLooper())
+
+    /** Launcher for picking a zip file to import */
+    private val importFileLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri -> importUserData(uri) }
+        }
+    }
 
     private var serverUrl: String = "http://127.0.0.1:8000"
     private var checkAttempts = 0
@@ -70,21 +90,26 @@ class LauncherActivity : AppCompatActivity() {
         btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        btnExport = findViewById(R.id.btn_export)
+        btnImport = findViewById(R.id.btn_import)
+
         btnRetry.setOnClickListener {
             checkAttempts = 0
             if (isV2Mode) startV2() else startServerCheck()
         }
+        btnExport.setOnClickListener { exportUserData() }
+        btnImport.setOnClickListener { pickImportFile() }
 
-        // Decide mode and go
+        // Show home screen, don't auto-start
         if (isV2Mode) {
             Log.i(TAG, "V2 mode: built-in Node.js")
             serverUrl = nodeManager.serverUrl
-            startV2()
+            showState(State.HOME)
         } else {
             Log.i(TAG, "V1 mode: Termux fallback")
             serverUrl = prefs.getString("server_url", "http://127.0.0.1:8000")
                 ?: "http://127.0.0.1:8000"
-            startServerCheck()
+            showState(State.HOME)
         }
     }
 
@@ -308,19 +333,152 @@ class LauncherActivity : AppCompatActivity() {
         }
     }
 
+    // ========================= Data Export/Import =========================
+
+    private fun exportUserData() {
+        scope.launch {
+            val dataDir = nodeManager.stDataDir
+            if (!dataDir.exists() || (dataDir.list()?.isEmpty() != false)) {
+                Toast.makeText(this@LauncherActivity, "没有用户数据可导出", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            showState(State.EXTRACTING)
+            subtitleText.text = "正在导出用户数据..."
+
+            try {
+                val exportFile = withContext(Dispatchers.IO) {
+                    val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    val outFile = File(downloadsDir, "SillyTavern_backup_${System.currentTimeMillis() / 1000}.zip")
+                    ZipOutputStream(FileOutputStream(outFile)).use { zos ->
+                        var count = 0
+                        dataDir.walkTopDown().forEach { file ->
+                            if (file.isFile) {
+                                val entryName = "data/" + file.relativeTo(dataDir).path.replace('\\', '/')
+                                zos.putNextEntry(ZipEntry(entryName))
+                                file.inputStream().use { it.copyTo(zos, 8192) }
+                                zos.closeEntry()
+                                count++
+                            }
+                        }
+                        Log.i(TAG, "Exported $count files to ${outFile.absolutePath}")
+                    }
+                    outFile
+                }
+
+                val sizeMb = String.format("%.1f", exportFile.length().toDouble() / 1024 / 1024)
+                showState(State.HOME)
+                Toast.makeText(
+                    this@LauncherActivity,
+                    "已导出到下载目录:\n${exportFile.name} ($sizeMb MB)",
+                    Toast.LENGTH_LONG
+                ).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Export failed", e)
+                showState(State.HOME)
+                Toast.makeText(this@LauncherActivity, "导出失败: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun pickImportFile() {
+        AlertDialog.Builder(this)
+            .setTitle("恢复数据")
+            .setMessage("将从备份 zip 文件恢复用户数据（角色卡、聊天记录、设置等）。\n\n当前数据将被覆盖，确定继续？")
+            .setPositiveButton("选择文件") { _, _ ->
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/zip"
+                }
+                importFileLauncher.launch(intent)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun importUserData(uri: Uri) {
+        scope.launch {
+            showState(State.EXTRACTING)
+            subtitleText.text = "正在恢复用户数据..."
+
+            try {
+                withContext(Dispatchers.IO) {
+                    val dataDir = nodeManager.stDataDir
+                    dataDir.mkdirs()
+
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        ZipInputStream(BufferedInputStream(input)).use { zis ->
+                            var entry = zis.nextEntry
+                            var count = 0
+                            while (entry != null) {
+                                val name = entry.name.replace('\\', '/')
+                                // Entries should start with "data/"
+                                val relativePath = if (name.startsWith("data/")) {
+                                    name.removePrefix("data/")
+                                } else {
+                                    name
+                                }
+
+                                if (relativePath.isNotEmpty()) {
+                                    val outFile = File(dataDir, relativePath)
+                                    if (entry.isDirectory) {
+                                        outFile.mkdirs()
+                                    } else {
+                                        outFile.parentFile?.mkdirs()
+                                        FileOutputStream(outFile).use { fos ->
+                                            zis.copyTo(fos, 8192)
+                                        }
+                                        count++
+                                    }
+                                }
+                                zis.closeEntry()
+                                entry = zis.nextEntry
+                            }
+                            Log.i(TAG, "Imported $count files to ${dataDir.absolutePath}")
+                        }
+                    } ?: throw IOException("无法读取文件")
+                }
+
+                showState(State.HOME)
+                Toast.makeText(this@LauncherActivity, "数据恢复成功！", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Import failed", e)
+                showState(State.HOME)
+                Toast.makeText(this@LauncherActivity, "恢复失败: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // ========================= UI State =========================
+
     private enum class State {
-        EXTRACTING, CHECKING, STARTING, CONNECTED, NOT_RUNNING, ERROR
+        HOME, EXTRACTING, CHECKING, STARTING, CONNECTED, NOT_RUNNING, ERROR
     }
 
     private fun showState(state: State) {
         runOnUiThread {
             when (state) {
+                State.HOME -> {
+                    statusText.text = "准备就绪"
+                    subtitleText.text = ""
+                    subtitleText.visibility = View.GONE
+                    progressBar.visibility = View.GONE
+                    btnStart.text = "启动酒馆"
+                    btnStart.visibility = View.VISIBLE
+                    btnExport.visibility = View.VISIBLE
+                    btnImport.visibility = View.VISIBLE
+                    btnTermux.visibility = View.GONE
+                    btnRetry.visibility = View.GONE
+                    btnSettings.visibility = View.VISIBLE
+                }
                 State.EXTRACTING -> {
                     statusText.text = "首次启动，正在准备..."
                     subtitleText.text = "解压 SillyTavern 运行环境"
                     subtitleText.visibility = View.VISIBLE
                     progressBar.visibility = View.VISIBLE
                     btnStart.visibility = View.GONE
+                    btnExport.visibility = View.GONE
+                    btnImport.visibility = View.GONE
                     btnTermux.visibility = View.GONE
                     btnRetry.visibility = View.GONE
                     btnSettings.visibility = View.GONE
@@ -331,6 +489,8 @@ class LauncherActivity : AppCompatActivity() {
                     subtitleText.visibility = View.VISIBLE
                     progressBar.visibility = View.VISIBLE
                     btnStart.visibility = View.GONE
+                    btnExport.visibility = View.GONE
+                    btnImport.visibility = View.GONE
                     btnTermux.visibility = View.GONE
                     btnRetry.visibility = View.GONE
                     btnSettings.visibility = View.GONE
@@ -341,6 +501,8 @@ class LauncherActivity : AppCompatActivity() {
                     subtitleText.visibility = View.VISIBLE
                     progressBar.visibility = View.VISIBLE
                     btnStart.visibility = View.GONE
+                    btnExport.visibility = View.GONE
+                    btnImport.visibility = View.GONE
                     btnTermux.visibility = View.GONE
                     btnRetry.visibility = View.GONE
                     btnSettings.visibility = View.GONE
@@ -351,6 +513,8 @@ class LauncherActivity : AppCompatActivity() {
                     subtitleText.visibility = View.VISIBLE
                     progressBar.visibility = View.GONE
                     btnStart.visibility = View.GONE
+                    btnExport.visibility = View.GONE
+                    btnImport.visibility = View.GONE
                     btnTermux.visibility = View.GONE
                     btnRetry.visibility = View.GONE
                     btnSettings.visibility = View.GONE
@@ -361,6 +525,8 @@ class LauncherActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     btnRetry.visibility = View.VISIBLE
                     btnSettings.visibility = View.VISIBLE
+                    btnExport.visibility = View.VISIBLE
+                    btnImport.visibility = View.VISIBLE
                     if (isV2Mode) {
                         subtitleText.text = "内置服务启动失败，请重试"
                         btnStart.text = "重新启动"
@@ -379,6 +545,8 @@ class LauncherActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     btnStart.text = "重试"
                     btnStart.visibility = View.VISIBLE
+                    btnExport.visibility = View.VISIBLE
+                    btnImport.visibility = View.VISIBLE
                     btnRetry.visibility = View.GONE
                     btnTermux.visibility = View.GONE
                     btnSettings.visibility = View.VISIBLE
