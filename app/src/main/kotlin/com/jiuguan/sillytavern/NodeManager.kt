@@ -102,9 +102,17 @@ class NodeManager(private val context: Context) {
             }
             stDir.mkdirs()
 
+            // Copy to temp file first - AssetManager streaming can corrupt large zips
+            val tmpZip = File(context.cacheDir, "sillytavern.zip")
+            onProgress("正在准备解压文件...")
             context.assets.open("sillytavern.zip").use { input ->
+                FileOutputStream(tmpZip).use { output -> input.copyTo(output, 65536) }
+            }
+            onProgress("正在解压 SillyTavern...")
+            FileInputStream(tmpZip).use { input ->
                 extractZip(input, stDir, onProgress)
             }
+            tmpZip.delete()
 
             // Write version marker
             File(baseDir, VERSION_FILE).writeText(BUNDLE_VERSION)
@@ -369,9 +377,15 @@ class NodeManager(private val context: Context) {
         libDir.mkdirs()
 
         try {
+            // Copy to temp file first - AssetManager streaming can corrupt large zips
+            val tmpZip = File(context.cacheDir, "nodelibs.zip")
             context.assets.open("nodelibs.zip").use { input ->
+                FileOutputStream(tmpZip).use { output -> input.copyTo(output, 65536) }
+            }
+            FileInputStream(tmpZip).use { input ->
                 extractZip(input, libDir, onProgress)
             }
+            tmpZip.delete()
             Log.i(TAG, "Node libs extracted to: ${libDir.absolutePath}, files: ${libDir.list()?.size}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to extract node libs", e)
