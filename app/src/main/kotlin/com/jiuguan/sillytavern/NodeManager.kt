@@ -135,48 +135,27 @@ class NodeManager(private val context: Context) {
      */
     fun ensureConfig() {
         val configFile = File(stDir, "config.yaml")
-        // Always overwrite - the default config from zip has browserLaunch.enabled=true
-        // which crashes on Android (no xdg-open).
-        if (true) {
-            Log.i(TAG, "Creating default config.yaml")
-            configFile.writeText("""
-                |# Auto-generated for Android
-                |dataRoot: ./data
-                |listen: false
-                |port: $SERVER_PORT
-                |protocol:
-                |  ipv4: true
-                |  ipv6: false
-                |dnsPreferIPv6: false
-                |autorun: false
-                |browserLaunch:
-                |  enabled: false
-                |  browser: ''
-                |securityOverride: false
-                |basicAuthMode: false
-                |enableCorsProxy: false
-                |whitelistMode: false
-            """.trimMargin())
-        } else {
-            // Patch existing config to disable browser launch
-            var content = configFile.readText()
-            var patched = false
-            if (content.contains("enabled: true") && content.contains("browserLaunch")) {
-                content = content.replace(
-                    Regex("(browserLaunch:[\\s\\S]*?)enabled:\\s*true"),
-                    "$1enabled: false"
-                )
-                patched = true
-            }
-            if (content.contains("autorun: true")) {
-                content = content.replace("autorun: true", "autorun: false")
-                patched = true
-            }
-            if (patched) {
-                configFile.writeText(content)
-                Log.i(TAG, "Patched config.yaml: disabled browser launch")
-            }
-        }
+        // Always overwrite with Android-safe config.
+        // Default config has browserLaunch.enabled=true which crashes (no xdg-open).
+        Log.i(TAG, "Writing Android config.yaml")
+        configFile.writeText("""
+            |# Auto-generated for Android — do not edit, will be overwritten on restart
+            |dataRoot: ./data
+            |listen: false
+            |port: $SERVER_PORT
+            |protocol:
+            |  ipv4: true
+            |  ipv6: false
+            |dnsPreferIPv6: false
+            |autorun: false
+            |browserLaunch:
+            |  enabled: false
+            |  browser: ''
+            |securityOverride: false
+            |basicAuthMode: false
+            |enableCorsProxy: false
+            |whitelistMode: false
+        """.trimMargin())
     }
 
     /**

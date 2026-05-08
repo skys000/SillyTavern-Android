@@ -21,6 +21,10 @@ import androidx.appcompat.app.AppCompatActivity
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * Main WebView activity displaying the SillyTavern UI.
+ * Features: full-screen immersive mode, file upload/download, mobile CSS injection.
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView

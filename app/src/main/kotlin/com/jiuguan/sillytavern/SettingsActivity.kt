@@ -12,6 +12,10 @@ import kotlinx.coroutines.*
 import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * Settings screen for V1 (Termux) mode — configure server URL and test connection.
+ * In V2 mode this is mostly informational since the server runs built-in.
+ */
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var prefs: SharedPreferences
