@@ -162,9 +162,15 @@ def package_sillytavern(branch: str, repo: str):
     # SillyTavern will gracefully degrade when these return empty results.
     create_stub_packages(st_dir / "node_modules")
 
+    # Also remove node_modules/.bin (Windows symlinks, not needed on Android)
+    bin_dir = st_dir / "node_modules" / ".bin"
+    if bin_dir.exists():
+        shutil.rmtree(bin_dir)
+        print("  Removed node_modules/.bin")
+
     print("  Packaging zip...")
     output_zip = ASSETS_DIR / "sillytavern.zip"
-    exclude_dirs = {".git", ".github", ".vscode", ".gemini"}
+    exclude_dirs = {".git", ".github", ".vscode", ".gemini", ".cache"}
 
     count = 0
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as zf:
@@ -172,6 +178,9 @@ def package_sillytavern(branch: str, repo: str):
             dirs[:] = [d for d in dirs if d not in exclude_dirs]
             for f in files:
                 full = os.path.join(root, f)
+                # Skip Windows symlinks that can't be read properly
+                if os.path.islink(full):
+                    continue
                 arc = os.path.relpath(full, st_dir).replace("\\", "/")
                 zf.write(full, arc)
                 count += 1

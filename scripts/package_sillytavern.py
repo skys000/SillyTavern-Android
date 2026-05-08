@@ -66,8 +66,15 @@ def package_zip(st_dir: Path):
     print(f"Packaging to {OUTPUT_ZIP}...")
     OUTPUT_ZIP.parent.mkdir(parents=True, exist_ok=True)
 
+    # Remove node_modules/.bin (Windows symlinks, not needed on Android)
+    bin_dir = st_dir / "node_modules" / ".bin"
+    if bin_dir.exists():
+        import shutil
+        shutil.rmtree(bin_dir)
+        print("  Removed node_modules/.bin")
+
     # Directories/files to exclude from the zip
-    exclude = {".git", ".github", ".vscode", ".gemini", "node_modules/.cache"}
+    exclude = {".git", ".github", ".vscode", ".gemini", ".cache"}
 
     count = 0
     with zipfile.ZipFile(OUTPUT_ZIP, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as zf:
@@ -79,6 +86,8 @@ def package_zip(st_dir: Path):
 
             for f in files:
                 full_path = os.path.join(root, f)
+                if os.path.islink(full_path):
+                    continue
                 arc_name = os.path.relpath(full_path, st_dir).replace("\\", "/")
                 zf.write(full_path, arc_name)
                 count += 1
